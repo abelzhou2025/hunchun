@@ -6,7 +6,7 @@ import { generateCoupletText } from './services/apiService';
 import { generateCoupletImage } from './services/jimengService';
 import { CoupletData, GenerationStatus } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hunchun-api.abelzhou3399.workers.dev';
 
 const App: React.FC = () => {
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);

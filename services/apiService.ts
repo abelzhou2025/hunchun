@@ -1,6 +1,6 @@
 import { CoupletData } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://hunchun-api.abelzhou3399.workers.dev";
 
 if (!API_BASE_URL) {
   console.error("API_BASE_URL is not set.");
