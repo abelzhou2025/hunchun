@@ -121,6 +121,86 @@ ${randomVariation}。避免使用常见的陈词滥调。
       }
     }
 
+    // 生成对联图片
+    if (path === '/api/generate-couplet-image') {
+      if (request.method !== 'POST') {
+        return new Response(
+          JSON.stringify({ error: 'Method not allowed' }),
+          { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        const { upper, lower, horizontal } = await request.json();
+
+        const prompt = `A traditional Chinese New Year couplet image with high artistic quality.
+
+COUPLET TEXT:
+- Upper scroll (right side, 上联): "${upper}"
+- Lower scroll (left side, 下联): "${lower}"
+- Horizontal scroll (top center, 横批): "${horizontal}"
+
+REQUIREMENTS:
+- Traditional red paper texture with gold speckles
+- Elegant golden Chinese calligraphy
+- Right to left text orientation for vertical scrolls
+- Professional photography quality, 4K resolution
+- Festive Chinese New Year atmosphere
+- Traditional Chinese decorative elements: lanterns, clouds, patterns
+- Warm lighting with golden highlights
+- Cinematic composition
+- Sharp focus on the couplet text
+- Random angle variation between 60-90 degrees for dynamic presentation`;
+
+        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gemini-3-pro-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.8,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        const content = result.choices?.[0]?.message?.content;
+
+        // 提取 Base64 图片
+        const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
+        let imageUrl;
+        if (base64Match && base64Match[1]) {
+          const mimeType = content.match(/data:image\/([^;]+)/)?.[1] || 'jpeg';
+          imageUrl = `data:image/${mimeType};base64,${base64Match[1]}`;
+        } else {
+          throw new Error('未获取到生成的图片');
+        }
+
+        return new Response(
+          JSON.stringify({ imageUrl }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        console.error('生成对联图片失败:', error);
+        return new Response(
+          JSON.stringify({ error: error.message || '生成对联图片失败' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // 生成手持对联自拍
     if (path === '/api/generate-selfie') {
       if (request.method !== 'POST') {

@@ -8,7 +8,6 @@ import { CoupletData, GenerationStatus } from './types';
 
 // API endpoint - deployed to Cloudflare Workers
 const API_BASE_URL = 'https://hunchun-api.abelzhou3399.workers.dev';
-console.log('API URL:', API_BASE_URL);
 
 const App: React.FC = () => {
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
@@ -34,12 +33,15 @@ const App: React.FC = () => {
     setCurrentTheme(theme);
 
     try {
+      console.log('Generating couplet text for:', recipient, theme);
       const data = await generateCoupletText(recipient, theme);
+      console.log('Couplet text generated:', data);
       setCoupletData(data);
       setStatus(GenerationStatus.SUCCESS_TEXT);
     } catch (error) {
-      console.error(error);
-      setErrorMsg("生成对联文字失败，请重试。");
+      console.error('Error generating couplet text:', error);
+      const errorMessage = error instanceof Error ? error.message : '生成对联文字失败，请重试。';
+      setErrorMsg(errorMessage);
       setStatus(GenerationStatus.ERROR);
     }
   };
@@ -51,12 +53,15 @@ const App: React.FC = () => {
     setErrorMsg(null);
 
     try {
+      console.log('Generating couplet image...');
       const imageUrl = await generateCoupletImage(coupletData);
+      console.log('Couplet image generated successfully');
       setGeneratedImageUrl(imageUrl);
       setStatus(GenerationStatus.SUCCESS_IMAGE);
     } catch (error) {
-      console.error(error);
-      setErrorMsg("生成图片失败，请重试。");
+      console.error('Error generating couplet image:', error);
+      const errorMessage = error instanceof Error ? error.message : '生成图片失败，请重试。';
+      setErrorMsg(errorMessage);
       setStatus(GenerationStatus.SUCCESS_TEXT);
     }
   };
@@ -90,30 +95,83 @@ const App: React.FC = () => {
     setErrorMsg(null);
 
     try {
+      // 压缩图片以避免超过请求限制
+      const compressedImageUrl = await compressImage(imageUrl);
+
+      console.log('Calling selfie API with image size:', compressedImageUrl.length);
+
       const response = await fetch(`${API_BASE_URL}/api/generate-selfie`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrl,
-          couplet: coupletData, // 直接传递前端已生成的对联数据
+          imageUrl: compressedImageUrl,
+          couplet: coupletData,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '生成失败');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || `生成失败 (${response.status})`);
       }
 
       const result = await response.json();
+      console.log('Selfie generated successfully');
       setSelfieResult(result);
       setStatus(GenerationStatus.SUCCESS_IMAGE);
     } catch (error) {
-      console.error(error);
-      setErrorMsg('生成手持对联照片失败，请重试。');
+      console.error('Selfie generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : '生成手持对联照片失败，请重试。';
+      setErrorMsg(errorMessage);
       setStatus(GenerationStatus.ERROR);
     }
+  };
+
+  // 压缩 Base64 图片
+  const compressImage = (base64: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        // 限制最大尺寸
+        const maxWidth = 1024;
+        const maxHeight = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 压缩为 JPEG，质量 0.85
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        console.log(`Image compressed: ${base64.length} -> ${compressed.length} bytes`);
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = base64;
+    });
   };
 
   const handleDownloadSelfie = () => {
