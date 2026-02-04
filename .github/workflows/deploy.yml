@@ -49,9 +49,12 @@ jobs:
         run: npm install
 
       - name: Build frontend
-        run: npm run build
+        run: |
+          export VITE_API_BASE_URL=${VITE_API_BASE_URL:-"https://hunchun-api.abelzhou3399.workers.dev"}
+          echo "Using API URL: $VITE_API_BASE_URL"
+          npm run build
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://hunchun-api.abelzhou3399.workers.dev' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
       - name: Deploy to Cloudflare Pages (Create project if not exists)
         run: |
