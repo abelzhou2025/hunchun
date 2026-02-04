@@ -1,12 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { contextStorage } from 'hono/context-storage';
 
 type Env = {
   DEEPSEEK_API_KEY: string;
   NANO_BANANA_API_KEY: string;
-  R2_BUCKET: R2Bucket;
-  TASK_STATUS?: KVNamespace;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -24,71 +21,55 @@ app.get('/health', (c) => {
 });
 
 /**
- * 生成 R2 预签名上传 URL
- * GET /api/upload-url?filename=photo.jpg
+ * 生成对联文本 (DeepSeek API)
+ * POST /api/generate-couplet-text
+ * Body: { recipient: string, theme: string }
  */
-app.get('/api/upload-url', async (c) => {
-  const filename = c.req.query('filename');
-  if (!filename) {
-    return c.json({ error: '缺少 filename 参数' }, 400);
+app.post('/api/generate-couplet-text', async (c) => {
+  try {
+    const { recipient, theme } = await c.req.json();
+
+    if (!recipient || !theme) {
+      return c.json({ error: '缺少必要参数: recipient, theme' }, 400);
+    }
+
+    const couplet = await generateCoupletText(c.env, recipient, theme);
+    return c.json(couplet);
+  } catch (error) {
+    console.error('生成对联文本失败:', error);
+    return c.json({
+      error: error.message || '生成对联文本失败',
+      status: 'error'
+    }, 500);
   }
-
-  // 生成唯一文件名
-  const key = `uploads/${Date.now()}-${filename}`;
-
-  // R2 预签名 URL (有效期 1 小时)
-  const url = await c.env.R2_BUCKET.signUrl(
-    new Request(`https://dummy.com/${key}`),
-    3600,
-    { method: 'PUT' }
-  );
-
-  return c.json({
-    uploadUrl: url.replace('https://dummy.com/', ''),
-    key,
-  });
 });
 
 /**
- * 生成手持对联自拍 (主流程)
+ * 生成手持对联自拍
  * POST /api/generate-selfie
- * Body: { imageUrl: string, recipient: string, theme: string }
+ * Body: { imageUrl: string, couplet: { upper, lower, horizontal } }
  */
 app.post('/api/generate-selfie', async (c) => {
   try {
-    const { imageUrl, recipient, theme } = await c.req.json();
+    const { imageUrl, couplet } = await c.req.json();
 
-    if (!imageUrl || !recipient || !theme) {
-      return c.json({ error: '缺少必要参数: imageUrl, recipient, theme' }, 400);
+    if (!imageUrl || !couplet) {
+      return c.json({ error: '缺少必要参数: imageUrl, couplet' }, 400);
     }
 
-    // 步骤 A: 调用 DeepSeek 生成对联文本
-    const couplet = await generateCoupletText(c.env, recipient, theme);
-
-    // 步骤 B: 调用 Nano Banana Img2Img 生成手持对联照片
+    // 直接生成手持对联自拍
     const resultImageUrl = await generateSelfieWithCouplet(c.env, imageUrl, couplet);
-
-    // 保存到 R2 并返回公共 URL
-    const finalKey = `generated/${Date.now()}-selfie.jpg`;
-
-    // 下载生成的图片并上传到 R2
-    const imageResponse = await fetch(resultImageUrl);
-    const imageBlob = await imageResponse.blob();
-    await c.env.R2_BUCKET.put(finalKey, imageBlob);
-
-    // 返回公共 URL (需要 R2 公有访问配置或使用自定义域名)
-    const publicUrl = `https://your-r2-domain.com/${finalKey}`;
 
     return c.json({
       couplet,
       originalImageUrl: imageUrl,
-      resultImageUrl: publicUrl,
+      resultImageUrl,
       status: 'completed',
     });
   } catch (error) {
-    console.error('生成失败:', error);
+    console.error('生成自拍失败:', error);
     return c.json({
-      error: error.message || '生成失败',
+      error: error.message || '生成自拍失败',
       status: 'error'
     }, 500);
   }
@@ -172,13 +153,69 @@ ${randomVariation}。避免使用常见的陈词滥调。
  * 生成手持对联自拍 (Nano Banana Img2Img)
  */
 async function generateSelfieWithCouplet(env: Env, sourceImageUrl: string, couplet: any) {
+  const sceneVariations = [
+    // 手持姿势变体
+    "holding TWO red couplet papers, one in each hand, arms extended forward at chest level, naturally displaying the couplet for a photo",
+    "holding TWO red couplet papers, one in each hand, at chest level with a proud and happy expression",
+    "holding TWO red couplet papers in both hands, selfie-style, slightly angled to show both papers clearly",
+    "holding TWO red couplet papers, one in each hand, arms slightly bent at the elbows, papers visible at waist level",
+    "holding TWO red couplet papers, one in each hand, diagonally positioned to create a dynamic composition",
+    "holding TWO red couplet papers, one in each hand, with one arm extended and the other bent for natural pose",
+
+    // 墙贴场景
+    "TWO red couplet papers PASTED on a wall, the person is standing beside them with one hand pointing at the couplet, happy and proud expression",
+    "TWO red couplet papers PASTED on a wall, the person is standing beside them with both arms open in celebration",
+    "TWO red couplet papers PASTED on a traditional red door, the person is standing in front of the door",
+
+    // 植物挂架场景
+    "TWO red couplet papers HANGING on a decorative plant stand with lucky bamboo, the person is standing beside it with one hand gesturing",
+    "TWO red couplet papers placed in a decorative couplet stand on a table, the person is holding the stand with both hands",
+
+    // 混合创意场景
+    "holding ONE red couplet paper in one hand, with the other paper PASTED on a visible wall in the background",
+    "holding ONE red couplet paper in one hand, with the other paper in a decorative stand on a nearby table"
+  ];
+
+  const randomScene = sceneVariations[Math.floor(Math.random() * sceneVariations.length)];
+  const randomSeed = Math.floor(Math.random() * 1000000);
+
   const coupletText = `${couplet.upper} ${couplet.lower}`;
 
-  const prompt = `A high-quality photo of the person in the source image holding a traditional red Chinese couplet with the text "${coupletText}" written in golden ink. The couplet should look realistic, positioned naturally in the person's hands. Cinematic lighting, festive Chinese New Year atmosphere, professional photography, 4K quality.`;
+  const prompt = `A photo of the person ${randomScene}.
+
+CRITICAL - FACE PRESERVATION RULES:
+- DO NOT MODIFY the person's face AT ALL
+- DO NOT CHANGE facial expression, features, or appearance
+- MAINTAIN the exact identity and likeness of the person
+- DO NOT make the person look different from the source image
+- PRESERVE age, ethnicity, gender, and unique facial characteristics
+
+BACKGROUND ENHANCEMENT:
+- Replace the background with a festive Chinese New Year atmosphere
+- Add traditional Chinese New Year decorations: red lanterns, golden ornaments
+- Ensure the background complements the festive mood
+- Keep focus on the person and couplet papers
+
+COUPLET PAPERS:
+- Left paper (上联): "${couplet.upper}"
+- Right paper (下联): "${couplet.lower}"
+- Two red papers with gold speckles texture
+- Chinese characters in elegant golden calligraphy
+- Papers should look realistic and properly positioned
+- Vertical text orientation on each paper
+
+QUALITY:
+- 4K ultra high definition
+- Professional photography quality
+- Cinematic lighting
+- Sharp focus on person and couplet
+- Natural skin texture preservation
+- Festive and celebratory atmosphere
+
+Random seed: ${randomSeed}`;
 
   console.log('调用 Nano Banana Img2Img...');
-  console.log('Source image:', sourceImageUrl);
-  console.log('Prompt:', prompt.substring(0, 100) + '...');
+  console.log('Prompt length:', prompt.length);
 
   // 调用 Nano Banana API
   const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
@@ -231,25 +268,5 @@ async function generateSelfieWithCouplet(env: Env, sourceImageUrl: string, coupl
 
   throw new Error('未获取到生成的图片');
 }
-
-/**
- * 查询任务状态 (可选，用于异步任务)
- * GET /api/task-status/:id
- */
-app.get('/api/task-status/:id', async (c) => {
-  const taskId = c.req.param('id');
-
-  if (!c.env.TASK_STATUS) {
-    return c.json({ error: 'KV storage 未配置' }, 500);
-  }
-
-  const status = await c.env.TASK_STATUS.get(taskId, 'json');
-
-  if (!status) {
-    return c.json({ error: '任务不存在' }, 404);
-  }
-
-  return c.json(status);
-});
 
 export default app;
