@@ -61,3 +61,6 @@ jobs:
           projectName: hunchun
           directory: dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # 自动创建项目
+          # productionBranch: main
+          # outputDirectory: dist
