@@ -26,6 +26,12 @@ jobs:
         run: |
           cd cloudflare
           npm install
+          echo "配置 Workers secrets..."
+          # 设置 DEEPSEEK_API_KEY（如果已存在会失败，忽略错误）
+          echo "$DEEPSEEK_API_KEY" | wrangler secret put DEEPSEEK_API_KEY || true
+          # 设置 NANO_BANANA_API_KEY
+          echo "$NANO_BANANA_API_KEY" | wrangler secret put NANO_BANANA_API_KEY || true
+          echo "部署 Workers..."
           wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
