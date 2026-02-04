@@ -1,0 +1,5 @@
+{
+  "name": "Hunchun - Spring Festival Couplet Generator",
+  "description": "A festive application to generate personalized Chinese New Year couplets (Chunlian) and greeting images using Gemini AI.",
+  "requestFramePermissions": []
+}
