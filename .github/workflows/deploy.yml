@@ -58,6 +58,8 @@ jobs:
         run: |
           echo "安装 Wrangler..."
           npm install -g wrangler
+          echo "创建 Pages 项目（如果不存在）..."
+          npx wrangler pages project create hunchun --production-branch=main || echo "项目已存在，继续部署"
           echo "部署到 Cloudflare Pages..."
           npx wrangler pages deploy dist --project-name=hunchun
         env:
