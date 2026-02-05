@@ -4,7 +4,8 @@
 
 import { CoupletData } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://hunchun-api.abelzhou3399.workers.dev";
+// Hardcoded API URL to avoid environment variable issues
+const API_BASE_URL = "https://hunchun-api.abelzhou3399.workers.dev";
 
 /**
  * 调用 Workers API 生成对联图片
