@@ -6,8 +6,12 @@ import { generateCoupletText } from './services/apiService';
 import { generateCoupletImage } from './services/jimengService';
 import { CoupletData, GenerationStatus } from './types';
 
-// API endpoint - deployed to Cloudflare Workers
-const API_BASE_URL = 'https://hunchun-api.abelzhou3399.workers.dev';
+// API endpoint - deployed to Cloudflare Workers or proxied via Pages Functions
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://hunchun-api.abelzhou3399.workers.dev');
 
 // Version logging for debugging
 console.log('='.repeat(50));

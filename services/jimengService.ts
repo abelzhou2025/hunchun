@@ -4,8 +4,12 @@
 
 import { CoupletData } from "../types";
 
-// Hardcoded API URL to avoid environment variable issues
-const API_BASE_URL = "https://hunchun-api.abelzhou3399.workers.dev";
+// API URL can be configured in Cloudflare Pages env: VITE_API_BASE_URL
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== "undefined"
+    ? window.location.origin
+    : "https://hunchun-api.abelzhou3399.workers.dev");
 
 /**
  * 调用 Workers API 生成对联图片

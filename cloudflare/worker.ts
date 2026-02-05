@@ -121,6 +121,59 @@ ${randomVariation}。避免使用常见的陈词滥调。
       }
     }
 
+    const callNanoBanana = async (payload) => {
+      const nanoBananaKey = env.NANO_BANANA_API_KEY;
+      const nanoBananaUrl = env.NANO_BANANA_API_URL;
+
+      if (!nanoBananaKey) {
+        throw new Error('NANO_BANANA_API_KEY 未配置');
+      }
+      if (!nanoBananaUrl) {
+        throw new Error('NANO_BANANA_API_URL 未配置');
+      }
+      if (nanoBananaUrl.startsWith('http://')) {
+        throw new Error('NANO_BANANA_API_URL 必须使用 https（Cloudflare Workers 生产环境不允许 http）');
+      }
+
+      const modelCandidates = [
+        env.NANO_BANANA_MODEL,
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gpt-4o-mini',
+      ].filter(Boolean);
+
+      const tried = new Set();
+      for (const model of modelCandidates) {
+        if (tried.has(model)) continue;
+        tried.add(model);
+
+        const response = await fetch(`${nanoBananaUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${nanoBananaKey}`,
+          },
+          body: JSON.stringify({ ...payload, model }),
+        });
+
+        if (response.ok) {
+          return await response.json();
+        }
+
+        const errorText = await response.text();
+        const isModelNotFound =
+          response.status === 503 &&
+          (errorText.includes('model_not_found') || errorText.includes('无可用渠道'));
+
+        if (!isModelNotFound) {
+          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
+        }
+      }
+
+      throw new Error('Nano Banana API 错误: 所有候选模型均不可用，请设置 NANO_BANANA_MODEL');
+    };
+
     // 生成对联图片
     if (path === '/api/generate-couplet-image') {
       if (request.method !== 'POST') {
@@ -153,40 +206,20 @@ REQUIREMENTS:
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
         console.log('Calling Nano Banana API for couplet image...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('URL:', env.NANO_BANANA_API_URL);
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
-        const nanoBananaKey = env.NANO_BANANA_API_KEY || 'sk-5VHmN7OWykDPc9MZgCUdCCbcMoBTZjJxvCiVtDh7rpJgSudH';
-        console.log('Using API key:', nanoBananaKey.substring(0, 10) + '...');
+        console.log('Using API key:', env.NANO_BANANA_API_KEY?.substring(0, 10) + '...');
 
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${nanoBananaKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gemini-2.0-flash-exp',  // Try different model
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.8,
-          }),
+        const result = await callNanoBanana({
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.8,
         });
-
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
-          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
         console.log('Nano Banana API response received');
 
         const content = result.choices?.[0]?.message?.content;
@@ -286,44 +319,25 @@ QUALITY:
 Random seed: ${randomSeed}`;
 
         console.log('Calling Nano Banana API...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('URL:', env.NANO_BANANA_API_URL);
         console.log('Prompt length:', prompt.length);
 
         // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
         // 图片使用 OpenAI 标准的 image_url 格式
-        const nanoBananaKey = env.NANO_BANANA_API_KEY || 'sk-5VHmN7OWykDPc9MZgCUdCCbcMoBTZjJxvCiVtDh7rpJgSudH';
-        console.log('Using API key:', nanoBananaKey.substring(0, 10) + '...');
+        console.log('Using API key:', env.NANO_BANANA_API_KEY?.substring(0, 10) + '...');
 
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${nanoBananaKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gemini-2.0-flash-exp',  // Try different model
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: prompt },
-                  { type: 'image_url', image_url: { url: imageUrl } }
-                ]
-              }
-            ],
-            temperature: 0.8,
-          }),
+        const result = await callNanoBanana({
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            }
+          ],
+          temperature: 0.8,
         });
-
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
-          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
         console.log('Nano Banana API response received for selfie');
 
         const content = result.choices?.[0]?.message?.content;
