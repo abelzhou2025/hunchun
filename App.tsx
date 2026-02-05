@@ -9,6 +9,13 @@ import { CoupletData, GenerationStatus } from './types';
 // API endpoint - deployed to Cloudflare Workers
 const API_BASE_URL = 'https://hunchun-api.abelzhou3399.workers.dev';
 
+// Version logging for debugging
+console.log('='.repeat(50));
+console.log('Hunchun App - Version 2025-02-05-20:57');
+console.log('API URL:', API_BASE_URL);
+console.log('If you see abelzhou2025 in error logs, clear browser cache!');
+console.log('='.repeat(50));
+
 const App: React.FC = () => {
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [coupletData, setCoupletData] = useState<CoupletData | null>(null);
