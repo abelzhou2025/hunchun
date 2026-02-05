@@ -71,9 +71,9 @@ ${randomVariation}。避免使用常见的陈词滥调。
               },
               { role: 'user', content: prompt }
             ],
-            temperature: 1.0,
+            temperature: 0.7,
             top_p: 0.9,
-            max_tokens: 200,
+            max_tokens: 150,
           }),
         });
 
