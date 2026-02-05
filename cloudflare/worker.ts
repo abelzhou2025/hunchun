@@ -152,6 +152,11 @@ REQUIREMENTS:
 - Sharp focus on the couplet text
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
+        console.log('Calling Nano Banana API for couplet image...');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('Prompt length:', prompt.length);
+
         const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -170,8 +175,11 @@ REQUIREMENTS:
           }),
         });
 
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('Error response:', errorText);
           throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
         }
 
@@ -272,6 +280,11 @@ QUALITY:
 
 Random seed: ${randomSeed}`;
 
+        console.log('Calling Nano Banana API...');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('Prompt length:', prompt.length);
+
         const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -293,8 +306,12 @@ Random seed: ${randomSeed}`;
           }),
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('Error response:', errorText);
           throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
         }
 
