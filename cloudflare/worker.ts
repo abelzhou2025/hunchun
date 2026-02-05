@@ -55,8 +55,8 @@ export default {
 ${randomVariation}。避免使用常见的陈词滥调。
 只输出JSON，不要额外文字。[参考ID: ${randomSeed}]`;
 
-        // 调用 DeepSeek API（国内端点）
-        const response = await fetch('https://api.deepseek.cn/chat/completions', {
+        // 调用 DeepSeek API（国际端点，Cloudflare Workers 可访问）
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
