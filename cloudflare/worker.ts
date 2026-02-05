@@ -153,11 +153,11 @@ REQUIREMENTS:
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
         console.log('Calling Nano Banana API for couplet image...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/chat/completions');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
+        // 使用 Nano Banana 的 /chat/completions 端点（OpenAI 兼容格式）
+        const response = await fetch('http://zx2.52youxi.cc:3000/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -302,18 +302,18 @@ QUALITY:
 Random seed: ${randomSeed}`;
 
         console.log('Calling Nano Banana API...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/chat/completions');
         console.log('Prompt length:', prompt.length);
 
         // 提取 base64 数据
         const base64Data = imageUrl.split(',')[1];
 
-        // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
+        // 使用 Nano Banana 的 /chat/completions 端点（OpenAI 兼容格式）
         // 图片数据附加在 prompt 后面，格式：Imagedata:image/jpeg;base64,...
         const imageContent = `Imagedata:image/jpeg;base64,${base64Data}`;
         const fullPrompt = `${prompt}\n\n${imageContent}`;
 
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
+        const response = await fetch('http://zx2.52youxi.cc:3000/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
