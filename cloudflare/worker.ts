@@ -153,11 +153,11 @@ REQUIREMENTS:
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
         console.log('Calling Nano Banana API for couplet image...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/chat/completions');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Nano Banana 的 /chat/completions 端点（OpenAI 兼容格式）
-        const response = await fetch('http://zx2.52youxi.cc:3000/chat/completions', {
+        // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
+        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -171,6 +171,7 @@ REQUIREMENTS:
                 content: prompt
               }
             ],
+            temperature: 0.8,
           }),
         });
 
@@ -185,36 +186,16 @@ REQUIREMENTS:
         const result = await response.json();
         console.log('Nano Banana API response received');
 
+        const content = result.choices?.[0]?.message?.content;
+
+        // 提取 Base64 图片
+        const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
         let resultImageUrl;
-
-        // 尝试多种响应格式
-        // 格式1: OpenAI 兼容 - choices[0].message.content
-        if (result.choices?.[0]?.message?.content) {
-          const content = result.choices[0].message.content;
-          // 提取 base64 图片
-          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-          if (base64Match?.[1]) {
-            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
-          }
-        }
-
-        // 格式2: 直接的 data 字段
-        if (!resultImageUrl && result.data) {
-          resultImageUrl = `data:image/jpeg;base64,${result.data}`;
-        }
-
-        // 格式3: message.content 字段
-        if (!resultImageUrl && result.message?.content) {
-          const content = result.message.content;
-          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-          if (base64Match?.[1]) {
-            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
-          }
-        }
-
-        if (!resultImageUrl) {
-          console.error('Invalid response format:', result);
-          throw new Error('API 返回格式无效，未获取到图片');
+        if (base64Match && base64Match[1]) {
+          const mimeType = content.match(/data:image\/([^;]+)/)?.[1] || 'jpeg';
+          resultImageUrl = `data:image/${mimeType};base64,${base64Match[1]}`;
+        } else {
+          throw new Error('未获取到生成的图片');
         }
 
         return new Response(
@@ -302,18 +283,12 @@ QUALITY:
 Random seed: ${randomSeed}`;
 
         console.log('Calling Nano Banana API...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/chat/completions');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
         console.log('Prompt length:', prompt.length);
 
-        // 提取 base64 数据
-        const base64Data = imageUrl.split(',')[1];
-
-        // 使用 Nano Banana 的 /chat/completions 端点（OpenAI 兼容格式）
-        // 图片数据附加在 prompt 后面，格式：Imagedata:image/jpeg;base64,...
-        const imageContent = `Imagedata:image/jpeg;base64,${base64Data}`;
-        const fullPrompt = `${prompt}\n\n${imageContent}`;
-
-        const response = await fetch('http://zx2.52youxi.cc:3000/chat/completions', {
+        // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
+        // 图片使用 OpenAI 标准的 image_url 格式
+        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -324,9 +299,13 @@ Random seed: ${randomSeed}`;
             messages: [
               {
                 role: 'user',
-                content: fullPrompt
+                content: [
+                  { type: 'text', text: prompt },
+                  { type: 'image_url', image_url: { url: imageUrl } }
+                ]
               }
             ],
+            temperature: 0.8,
           }),
         });
 
@@ -341,36 +320,16 @@ Random seed: ${randomSeed}`;
         const result = await response.json();
         console.log('Nano Banana API response received for selfie');
 
+        const content = result.choices?.[0]?.message?.content;
+
+        // 提取 Base64 图片
+        const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
         let resultImageUrl;
-
-        // 尝试多种响应格式
-        // 格式1: OpenAI 兼容 - choices[0].message.content
-        if (result.choices?.[0]?.message?.content) {
-          const content = result.choices[0].message.content;
-          // 提取 base64 图片
-          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-          if (base64Match?.[1]) {
-            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
-          }
-        }
-
-        // 格式2: 直接的 data 字段
-        if (!resultImageUrl && result.data) {
-          resultImageUrl = `data:image/jpeg;base64,${result.data}`;
-        }
-
-        // 格式3: message.content 字段
-        if (!resultImageUrl && result.message?.content) {
-          const content = result.message.content;
-          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-          if (base64Match?.[1]) {
-            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
-          }
-        }
-
-        if (!resultImageUrl) {
-          console.error('Invalid response format:', result);
-          throw new Error('API 返回格式无效，未获取到图片');
+        if (base64Match && base64Match[1]) {
+          const mimeType = content.match(/data:image\/([^;]+)/)?.[1] || 'jpeg';
+          resultImageUrl = `data:image/${mimeType};base64,${base64Match[1]}`;
+        } else {
+          throw new Error('未获取到生成的图片');
         }
 
         return new Response(
