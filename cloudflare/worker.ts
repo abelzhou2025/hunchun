@@ -157,14 +157,17 @@ REQUIREMENTS:
         console.log('Prompt length:', prompt.length);
 
         // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
+        const nanoBananaKey = env.NANO_BANANA_API_KEY || 'sk-5VHmN7OWykDPc9MZgCUdCCbcMoBTZjJxvCiVtDh7rpJgSudH';
+        console.log('Using API key:', nanoBananaKey.substring(0, 10) + '...');
+
         const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
+            'Authorization': `Bearer ${nanoBananaKey}`,
           },
           body: JSON.stringify({
-            model: 'gemini-3-pro-image-preview',
+            model: 'gemini-2.0-flash-exp',  // Try different model
             messages: [
               {
                 role: 'user',
@@ -288,14 +291,17 @@ Random seed: ${randomSeed}`;
 
         // 使用 Nano Banana 的 /v1/chat/completions 端点（OpenAI 兼容格式）
         // 图片使用 OpenAI 标准的 image_url 格式
+        const nanoBananaKey = env.NANO_BANANA_API_KEY || 'sk-5VHmN7OWykDPc9MZgCUdCCbcMoBTZjJxvCiVtDh7rpJgSudH';
+        console.log('Using API key:', nanoBananaKey.substring(0, 10) + '...');
+
         const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
+            'Authorization': `Bearer ${nanoBananaKey}`,
           },
           body: JSON.stringify({
-            model: 'gemini-3-pro-image-preview',
+            model: 'gemini-2.0-flash-exp',  // Try different model
             messages: [
               {
                 role: 'user',
