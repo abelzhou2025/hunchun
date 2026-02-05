@@ -153,25 +153,29 @@ REQUIREMENTS:
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
         console.log('Calling Nano Banana API for couplet image...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
-        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent');
         console.log('Prompt length:', prompt.length);
 
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
+        // 使用 Google 原生格式
+        const response = await fetch('http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
+            'x-goog-api-key': env.NANO_BANANA_API_KEY,
           },
           body: JSON.stringify({
-            model: 'gemini-3-pro-image-preview',
-            messages: [
-              {
-                role: 'user',
-                content: prompt
+            contents: [{
+              parts: [
+                { text: prompt }
+              ]
+            }],
+            generationConfig: {
+              responseModalities: ['TEXT', 'IMAGE'],
+              imageConfig: {
+                aspectRatio: '16:9',
+                imageSize: '2K'
               }
-            ],
-            temperature: 0.8,
+            }
           }),
         });
 
@@ -184,16 +188,29 @@ REQUIREMENTS:
         }
 
         const result = await response.json();
-        const content = result.choices?.[0]?.message?.content;
+        console.log('Nano Banana API response received');
 
-        // 提取 Base64 图片
-        const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-        let imageUrl;
-        if (base64Match && base64Match[1]) {
-          const mimeType = content.match(/data:image\/([^;]+)/)?.[1] || 'jpeg';
-          imageUrl = `data:image/${mimeType};base64,${base64Match[1]}`;
+        // Google 原生格式：candidates[0].content.parts[]
+        if (result.candidates && result.candidates.length > 0) {
+          const parts = result.candidates[0].content?.parts || [];
+          console.log('Number of parts:', parts.length);
+
+          // 查找图片
+          for (const part of parts) {
+            if (part.inline_data) {
+              const mimeType = part.inline_data.mime_type || 'image/jpeg';
+              const data = part.inline_data.data;
+              resultImageUrl = `data:${mimeType};base64,${data}`;
+              break;
+            }
+          }
+
+          if (!resultImageUrl) {
+            throw new Error('未获取到生成的图片');
+          }
         } else {
-          throw new Error('未获取到生成的图片');
+          console.error('Invalid response format:', result);
+          throw new Error('API 返回格式无效');
         }
 
         return new Response(
@@ -281,33 +298,39 @@ QUALITY:
 Random seed: ${randomSeed}`;
 
         console.log('Calling Nano Banana API...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1/chat/completions');
-        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent');
         console.log('Prompt length:', prompt.length);
 
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1/chat/completions', {
+        // 使用 Google 原生格式（通过 Nano Banana 代理）
+        const response = await fetch('http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
+            'x-goog-api-key': env.NANO_BANANA_API_KEY,
           },
           body: JSON.stringify({
-            model: 'gemini-3-pro-image-preview',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: prompt },
-                  { type: 'image_url', image_url: { url: imageUrl } }
-                ]
+            contents: [{
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: imageUrl.split(',')[1] // 提取 base64 数据
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              responseModalities: ['TEXT', 'IMAGE'],
+              imageConfig: {
+                aspectRatio: '16:9',
+                imageSize: '2K'
               }
-            ],
-            temperature: 0.8,
+            }
           }),
         });
 
         console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -316,16 +339,29 @@ Random seed: ${randomSeed}`;
         }
 
         const result = await response.json();
-        const content = result.choices?.[0]?.message?.content;
+        console.log('Nano Banana API response received for selfie');
 
-        // 提取 Base64 图片
-        const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
-        let resultImageUrl;
-        if (base64Match && base64Match[1]) {
-          const mimeType = content.match(/data:image\/([^;]+)/)?.[1] || 'jpeg';
-          resultImageUrl = `data:image/${mimeType};base64,${base64Match[1]}`;
+        // Google 原生格式：candidates[0].content.parts[]
+        if (result.candidates && result.candidates.length > 0) {
+          const parts = result.candidates[0].content?.parts || [];
+          console.log('Number of parts:', parts.length);
+
+          // 查找图片
+          for (const part of parts) {
+            if (part.inline_data) {
+              const mimeType = part.inline_data.mime_type || 'image/jpeg';
+              const data = part.inline_data.data;
+              resultImageUrl = `data:${mimeType};base64,${data}`;
+              break;
+            }
+          }
+
+          if (!resultImageUrl) {
+            throw new Error('未获取到生成的图片');
+          }
         } else {
-          throw new Error('未获取到生成的图片');
+          console.error('Invalid response format:', result);
+          throw new Error('API 返回格式无效');
         }
 
         return new Response(
