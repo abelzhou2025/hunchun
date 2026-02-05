@@ -152,16 +152,15 @@ REQUIREMENTS:
 - Sharp focus on the couplet text
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
-        console.log('Calling Nano Banana API for couplet image...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent');
+        console.log('Calling Google official API for couplet image...');
+        console.log('Model:', 'gemini-3-pro-image-preview');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Google 原生格式
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent', {
+        // 使用 Google 官方 API
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${env.NANO_BANANA_API_KEY}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': env.NANO_BANANA_API_KEY,
           },
           body: JSON.stringify({
             contents: [{
@@ -171,10 +170,6 @@ REQUIREMENTS:
             }],
             generationConfig: {
               responseModalities: ['TEXT', 'IMAGE'],
-              imageConfig: {
-                aspectRatio: '16:9',
-                imageSize: '2K'
-              }
             }
           }),
         });
@@ -184,7 +179,7 @@ REQUIREMENTS:
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Error response:', errorText);
-          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
+          throw new Error(`Google API 错误: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
@@ -297,16 +292,15 @@ QUALITY:
 
 Random seed: ${randomSeed}`;
 
-        console.log('Calling Nano Banana API...');
-        console.log('URL:', 'http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent');
+        console.log('Calling Google official API...');
+        console.log('Model:', 'gemini-3-pro-image-preview');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Google 原生格式（通过 Nano Banana 代理）
-        const response = await fetch('http://zx2.52youxi.cc:3000/v1beta/models/gemini-3-pro-image-preview:generateContent', {
+        // 使用 Google 官方 API（不通过 Nano Banana 代理）
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${env.NANO_BANANA_API_KEY}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': env.NANO_BANANA_API_KEY,
           },
           body: JSON.stringify({
             contents: [{
@@ -315,17 +309,13 @@ Random seed: ${randomSeed}`;
                 {
                   inline_data: {
                     mime_type: 'image/jpeg',
-                    data: imageUrl.split(',')[1] // 提取 base64 数据
+                    data: imageUrl.split(',')[1]
                   }
                 }
               ]
             }],
             generationConfig: {
               responseModalities: ['TEXT', 'IMAGE'],
-              imageConfig: {
-                aspectRatio: '16:9',
-                imageSize: '2K'
-              }
             }
           }),
         });
@@ -335,7 +325,7 @@ Random seed: ${randomSeed}`;
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Error response:', errorText);
-          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
+          throw new Error(`Google API 错误: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
