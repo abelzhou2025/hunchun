@@ -152,25 +152,25 @@ REQUIREMENTS:
 - Sharp focus on the couplet text
 - Random angle variation between 60-90 degrees for dynamic presentation`;
 
-        console.log('Calling Google official API for couplet image...');
-        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('Calling Nano Banana API for couplet image...');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/completions');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Google 官方 API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${env.NANO_BANANA_API_KEY}`, {
+        // 使用 Nano Banana 的 /completions 端点（OpenAI 兼容格式）
+        const response = await fetch('http://zx2.52youxi.cc:3000/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: prompt }
-              ]
-            }],
-            generationConfig: {
-              responseModalities: ['TEXT', 'IMAGE'],
-            }
+            model: 'gemini-3-pro-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
           }),
         });
 
@@ -179,37 +179,46 @@ REQUIREMENTS:
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Error response:', errorText);
-          throw new Error(`Google API 错误: ${response.status} - ${errorText}`);
+          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
         console.log('Nano Banana API response received');
 
-        // Google 原生格式：candidates[0].content.parts[]
-        if (result.candidates && result.candidates.length > 0) {
-          const parts = result.candidates[0].content?.parts || [];
-          console.log('Number of parts:', parts.length);
+        let resultImageUrl;
 
-          // 查找图片
-          for (const part of parts) {
-            if (part.inline_data) {
-              const mimeType = part.inline_data.mime_type || 'image/jpeg';
-              const data = part.inline_data.data;
-              resultImageUrl = `data:${mimeType};base64,${data}`;
-              break;
-            }
+        // 尝试多种响应格式
+        // 格式1: OpenAI 兼容 - choices[0].message.content
+        if (result.choices?.[0]?.message?.content) {
+          const content = result.choices[0].message.content;
+          // 提取 base64 图片
+          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
+          if (base64Match?.[1]) {
+            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
           }
+        }
 
-          if (!resultImageUrl) {
-            throw new Error('未获取到生成的图片');
+        // 格式2: 直接的 data 字段
+        if (!resultImageUrl && result.data) {
+          resultImageUrl = `data:image/jpeg;base64,${result.data}`;
+        }
+
+        // 格式3: message.content 字段
+        if (!resultImageUrl && result.message?.content) {
+          const content = result.message.content;
+          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
+          if (base64Match?.[1]) {
+            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
           }
-        } else {
+        }
+
+        if (!resultImageUrl) {
           console.error('Invalid response format:', result);
-          throw new Error('API 返回格式无效');
+          throw new Error('API 返回格式无效，未获取到图片');
         }
 
         return new Response(
-          JSON.stringify({ imageUrl }),
+          JSON.stringify({ imageUrl: resultImageUrl }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } catch (error) {
@@ -292,31 +301,32 @@ QUALITY:
 
 Random seed: ${randomSeed}`;
 
-        console.log('Calling Google official API...');
-        console.log('Model:', 'gemini-3-pro-image-preview');
+        console.log('Calling Nano Banana API...');
+        console.log('URL:', 'http://zx2.52youxi.cc:3000/completions');
         console.log('Prompt length:', prompt.length);
 
-        // 使用 Google 官方 API（不通过 Nano Banana 代理）
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${env.NANO_BANANA_API_KEY}`, {
+        // 提取 base64 数据
+        const base64Data = imageUrl.split(',')[1];
+
+        // 使用 Nano Banana 的 /completions 端点（OpenAI 兼容格式）
+        // 图片数据附加在 prompt 后面，格式：Imagedata:image/jpeg;base64,...
+        const imageContent = `Imagedata:image/jpeg;base64,${base64Data}`;
+        const fullPrompt = `${prompt}\n\n${imageContent}`;
+
+        const response = await fetch('http://zx2.52youxi.cc:3000/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.NANO_BANANA_API_KEY}`,
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: 'image/jpeg',
-                    data: imageUrl.split(',')[1]
-                  }
-                }
-              ]
-            }],
-            generationConfig: {
-              responseModalities: ['TEXT', 'IMAGE'],
-            }
+            model: 'gemini-3-pro-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: fullPrompt
+              }
+            ],
           }),
         });
 
@@ -325,33 +335,42 @@ Random seed: ${randomSeed}`;
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Error response:', errorText);
-          throw new Error(`Google API 错误: ${response.status} - ${errorText}`);
+          throw new Error(`Nano Banana API 错误: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
         console.log('Nano Banana API response received for selfie');
 
-        // Google 原生格式：candidates[0].content.parts[]
-        if (result.candidates && result.candidates.length > 0) {
-          const parts = result.candidates[0].content?.parts || [];
-          console.log('Number of parts:', parts.length);
+        let resultImageUrl;
 
-          // 查找图片
-          for (const part of parts) {
-            if (part.inline_data) {
-              const mimeType = part.inline_data.mime_type || 'image/jpeg';
-              const data = part.inline_data.data;
-              resultImageUrl = `data:${mimeType};base64,${data}`;
-              break;
-            }
+        // 尝试多种响应格式
+        // 格式1: OpenAI 兼容 - choices[0].message.content
+        if (result.choices?.[0]?.message?.content) {
+          const content = result.choices[0].message.content;
+          // 提取 base64 图片
+          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
+          if (base64Match?.[1]) {
+            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
           }
+        }
 
-          if (!resultImageUrl) {
-            throw new Error('未获取到生成的图片');
+        // 格式2: 直接的 data 字段
+        if (!resultImageUrl && result.data) {
+          resultImageUrl = `data:image/jpeg;base64,${result.data}`;
+        }
+
+        // 格式3: message.content 字段
+        if (!resultImageUrl && result.message?.content) {
+          const content = result.message.content;
+          const base64Match = content.match(/!\[image\]\(data:image\/[^;]+;base64,([^\)]+)\)/);
+          if (base64Match?.[1]) {
+            resultImageUrl = `data:image/jpeg;base64,${base64Match[1]}`;
           }
-        } else {
+        }
+
+        if (!resultImageUrl) {
           console.error('Invalid response format:', result);
-          throw new Error('API 返回格式无效');
+          throw new Error('API 返回格式无效，未获取到图片');
         }
 
         return new Response(
