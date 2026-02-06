@@ -1,10 +1,12 @@
 import { CoupletData } from "../types";
 
+const fallbackOrigin =
+  typeof window !== "undefined" ? window.location.origin : "https://hunchun.pages.dev";
+const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== "undefined"
-    ? window.location.origin
-    : "https://hunchun-api.abelzhou3399.workers.dev");
+  envApiBaseUrl && !envApiBaseUrl.includes("workers.dev")
+    ? envApiBaseUrl
+    : fallbackOrigin;
 
 if (!API_BASE_URL) {
   console.error("API_BASE_URL is not set.");

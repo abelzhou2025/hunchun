@@ -6,12 +6,14 @@ import { generateCoupletText } from './services/apiService';
 import { generateCoupletImage } from './services/jimengService';
 import { CoupletData, GenerationStatus } from './types';
 
-// API endpoint - deployed to Cloudflare Workers or proxied via Pages Functions
+// API endpoint - prefer same-origin proxy to avoid workers.dev blocks on mobile
+const fallbackOrigin =
+  typeof window !== 'undefined' ? window.location.origin : 'https://hunchun.pages.dev';
+const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://hunchun-api.abelzhou3399.workers.dev');
+  envApiBaseUrl && !envApiBaseUrl.includes('workers.dev')
+    ? envApiBaseUrl
+    : fallbackOrigin;
 
 // Version logging for debugging
 console.log('='.repeat(50));

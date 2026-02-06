@@ -50,11 +50,12 @@ jobs:
 
       - name: Build frontend
         run: |
-          export VITE_API_BASE_URL=${VITE_API_BASE_URL:-"https://hunchun-api.abelzhou3399.workers.dev"}
-          echo "Using API URL: $VITE_API_BASE_URL"
+          if [ -n "$VITE_API_BASE_URL" ]; then
+            echo "Using API URL: $VITE_API_BASE_URL"
+          else
+            echo "Using same-origin API"
+          fi
           npm run build
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
       - name: Deploy to Cloudflare Pages (Create project if not exists)
         run: |
